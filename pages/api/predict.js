@@ -9,6 +9,20 @@ function timeoutFetch(resource, options = {}, timeout = DEFAULT_TIMEOUT_MS) {
     .finally(() => clearTimeout(id));
 }
 
+async function pingHealth(baseUrl) {
+  try {
+    const healthUrl = `${baseUrl}/health`;
+    await timeoutFetch(healthUrl, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      // avoid cached responses
+      cache: 'no-store',
+    }, DEFAULT_TIMEOUT_MS);
+  } catch (_) {
+    // ignore
+  }
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -43,7 +57,7 @@ export default async function handler(req, res) {
       return { ok: true, body: json };
     };
 
-    const maxRetries = 2;
+    const maxRetries = 3;
     for (let i = 0; i <= maxRetries; i++) {
       try {
         const r = await attempt();
@@ -52,6 +66,8 @@ export default async function handler(req, res) {
         }
         const retriable = r.status === 502 || r.status === 504 || r.status === 500 || r.status === 503;
         if (retriable && i < maxRetries) {
+          // Try to wake backend (Render cold start) before retrying
+          await pingHealth(API_URL);
           await new Promise((s) => setTimeout(s, 5000));
           continue;
         }
@@ -64,6 +80,7 @@ export default async function handler(req, res) {
       } catch (innerErr) {
         // Network/timeout error
         if (i < maxRetries) {
+          await pingHealth(API_URL);
           await new Promise((s) => setTimeout(s, 5000));
           continue;
         }
