@@ -1,0 +1,139 @@
+import { useState } from 'react';
+import Head from 'next/head';
+import styles from '../styles/Home.module.css';
+
+export default function Home() {
+  const [text, setText] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [results, setResults] = useState(null);
+  const [error, setError] = useState(null);
+
+  const handlePredict = async () => {
+    if (!text.trim()) {
+      setError('Please enter some text');
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setResults(null);
+
+    try {
+      const response = await fetch('/api/predict', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Prediction failed');
+      }
+
+      const data = await response.json();
+      setResults(data);
+    } catch (err) {
+      setError(err.message || 'An error occurred');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className={styles.container}>
+      <Head>
+        <title>BERT vs DeBERTa - Fake Review Detection</title>
+        <meta name="description" content="Compare BERT and DeBERTa models for fake review detection" />
+        <link rel="icon" href="/favicon.ico" />
+      </Head>
+
+      <main className={styles.main}>
+        <h1 className={styles.title}>
+          BERT vs DeBERTa
+        </h1>
+        <p className={styles.description}>
+          Compare Transformer Models for Fake Review Detection
+        </p>
+
+        <div className={styles.inputSection}>
+          <textarea
+            className={styles.textarea}
+            placeholder="Enter your review text here..."
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            rows={6}
+          />
+          <button
+            className={styles.button}
+            onClick={handlePredict}
+            disabled={loading}
+          >
+            {loading ? 'Analyzing...' : 'Analyze Review'}
+          </button>
+        </div>
+
+        {error && (
+          <div className={styles.error}>
+            {error}
+          </div>
+        )}
+
+        {results && (
+          <div className={styles.results}>
+            <h2>Prediction Results</h2>
+            
+            <div className={styles.comparison}>
+              <div className={styles.modelCard}>
+                <h3>BERT</h3>
+                <div className={styles.prediction}>
+                  <div className={styles.label}>
+                    Prediction: <span className={results.bert.prediction === 0 ? styles.fake : styles.genuine}>
+                      {results.bert.prediction === 0 ? 'Fake Review' : 'Genuine Review'}
+                    </span>
+                  </div>
+                  <div className={styles.confidence}>
+                    Confidence: {(results.bert.confidence * 100).toFixed(2)}%
+                  </div>
+                  <div className={styles.probabilities}>
+                    <div>Fake: {(results.bert.probabilities[0] * 100).toFixed(2)}%</div>
+                    <div>Genuine: {(results.bert.probabilities[1] * 100).toFixed(2)}%</div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className={styles.modelCard}>
+                <h3>DeBERTa</h3>
+                <div className={styles.prediction}>
+                  <div className={styles.label}>
+                    Prediction: <span className={results.deberta.prediction === 0 ? styles.fake : styles.genuine}>
+                      {results.deberta.prediction === 0 ? 'Fake Review' : 'Genuine Review'}
+                    </span>
+                  </div>
+                  <div className={styles.confidence}>
+                    Confidence: {(results.deberta.confidence * 100).toFixed(2)}%
+                  </div>
+                  <div className={styles.probabilities}>
+                    <div>Fake: {(results.deberta.probabilities[0] * 100).toFixed(2)}%</div>
+                    <div>Genuine: {(results.deberta.probabilities[1] * 100).toFixed(2)}%</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {results.bert.prediction !== results.deberta.prediction && (
+              <div className={styles.disagreement}>
+                ⚠️ Models disagree on this review!
+              </div>
+            )}
+          </div>
+        )}
+      </main>
+
+      <footer className={styles.footer}>
+        <p>BERT vs DeBERTa Fake Review Detection System</p>
+      </footer>
+    </div>
+  );
+}
+
