@@ -1,5 +1,5 @@
 // API route to call Python backend
-const API_URL = process.env.API_URL || 'http://localhost:8000';
+const API_URL = process.env.API_URL || 'https://fakenews-oz9j.onrender.com';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
