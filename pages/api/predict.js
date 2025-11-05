@@ -1,5 +1,13 @@
 // API route to call Python backend
 const API_URL = process.env.API_URL || 'https://fakenews-oz9j.onrender.com';
+const DEFAULT_TIMEOUT_MS = 60000; // 60s to allow cold-starts
+
+function timeoutFetch(resource, options = {}, timeout = DEFAULT_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), timeout);
+  return fetch(resource, { ...options, signal: controller.signal })
+    .finally(() => clearTimeout(id));
+}
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -13,29 +21,60 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Call Python backend using native fetch (Node 18+)
+    // Call Python backend using native fetch with timeout/retries (Node 18+)
     const backendUrl = `${API_URL}/predict`;
-    
-    const response = await fetch(backendUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ text }),
-    });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Backend error:', response.status, errorText);
-      return res.status(response.status).json({ 
-        error: 'Backend request failed',
-        status: response.status,
-        message: errorText
+    const attempt = async () => {
+      const response = await timeoutFetch(backendUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text }),
       });
-    }
 
-    const data = await response.json();
-    return res.status(200).json(data);
+      const textBody = await response.text();
+      let json;
+      try { json = JSON.parse(textBody); } catch (_) { /* non-JSON (e.g., HTML 502 page) */ }
+
+      if (!response.ok) {
+        return { ok: false, status: response.status, body: json || textBody };
+      }
+      return { ok: true, body: json };
+    };
+
+    const maxRetries = 2;
+    for (let i = 0; i <= maxRetries; i++) {
+      try {
+        const r = await attempt();
+        if (r.ok) {
+          return res.status(200).json(r.body);
+        }
+        const retriable = r.status === 502 || r.status === 504 || r.status === 500 || r.status === 503;
+        if (retriable && i < maxRetries) {
+          await new Promise((s) => setTimeout(s, 5000));
+          continue;
+        }
+        return res.status(r.status || 500).json({
+          error: 'Backend request failed',
+          status: r.status || 500,
+          message: typeof r.body === 'string' ? r.body.slice(0, 500) : r.body,
+          apiUrl: API_URL,
+        });
+      } catch (innerErr) {
+        // Network/timeout error
+        if (i < maxRetries) {
+          await new Promise((s) => setTimeout(s, 5000));
+          continue;
+        }
+        console.error('Prediction attempt failed:', innerErr);
+        return res.status(504).json({
+          error: 'Backend request timed out',
+          message: innerErr.message || 'Timeout',
+          apiUrl: API_URL,
+        });
+      }
+    }
   } catch (error) {
     console.error('Prediction error:', error);
     console.error('Error stack:', error.stack);
