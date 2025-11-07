@@ -54,7 +54,7 @@ export default function Dataset() {
   return (
     <div className={styles.container}>
       <Head>
-        <title>Dataset Viewer - DeBERTa Fake Review Detection</title>
+        <title>Dataset Viewer - Fake News Using DeBERTa Model</title>
       </Head>
 
       <nav className={styles.nav}>
