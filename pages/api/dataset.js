@@ -1,5 +1,5 @@
-// API route to serve dataset samples - proxies to Python backend
-const API_URL = process.env.API_URL || 'http://localhost:8000';
+// API route to serve dataset samples - proxies to Python backend (production: Render, development: localhost)
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'https://fakenews-oz9j.onrender.com';
 
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
@@ -10,14 +10,29 @@ export default async function handler(req, res) {
     const response = await fetch(`${API_URL}/dataset`);
     
     if (!response.ok) {
-      throw new Error('Failed to fetch dataset');
+      const errorText = await response.text();
+      let errorData;
+      try {
+        errorData = JSON.parse(errorText);
+      } catch {
+        errorData = { error: errorText || `Backend returned ${response.status}` };
+      }
+      
+      return res.status(response.status).json({
+        error: 'Failed to fetch dataset',
+        ...errorData,
+      });
     }
 
     const data = await response.json();
     return res.status(200).json(data);
   } catch (error) {
     console.error('Dataset error:', error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ 
+      error: 'Failed to connect to backend',
+      message: error.message || 'Make sure the backend server is running on http://localhost:8000',
+      apiUrl: API_URL
+    });
   }
 }
 
