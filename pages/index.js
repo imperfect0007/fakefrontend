@@ -28,13 +28,28 @@ export default function Home() {
       });
 
       if (!response.ok) {
-        throw new Error('Prediction failed');
+        const errorData = await response.json().catch(() => ({ error: 'Prediction failed' }));
+        throw new Error(errorData.message || errorData.error || 'Prediction failed');
       }
 
       const data = await response.json();
+      console.log('Received prediction results:', data);
+      
+      // Ensure data is in expected format
+      if (!data || (typeof data !== 'object')) {
+        throw new Error('Invalid response format from backend');
+      }
+      
       setResults(data);
     } catch (err) {
-      setError(err.message || 'An error occurred');
+      console.error('Prediction error:', err);
+      const errorMessage = err.message || 'An error occurred';
+      if (errorMessage.includes('localhost') || errorMessage.includes('connect')) {
+        setError('Cannot connect to backend. Make sure the backend server is running on http://localhost:8000');
+      } else {
+        setError(errorMessage);
+      }
+      setResults(null); // Clear results on error
     } finally {
       setLoading(false);
     }
@@ -84,44 +99,50 @@ export default function Home() {
             <h2>Prediction Results</h2>
             
             <div className={styles.comparison}>
-              <div className={styles.modelCard}>
-                <h3>BERT</h3>
-                <div className={styles.prediction}>
-                  <div className={styles.label}>
-                    Prediction: <span className={results.bert.prediction === 0 ? styles.fake : styles.genuine}>
-                      {results.bert.prediction === 0 ? 'Fake Review' : 'Genuine Review'}
-                    </span>
-                  </div>
-                  <div className={styles.confidence}>
-                    Confidence: {(results.bert.confidence * 100).toFixed(2)}%
-                  </div>
-                  <div className={styles.probabilities}>
-                    <div>Fake: {(results.bert.probabilities[0] * 100).toFixed(2)}%</div>
-                    <div>Genuine: {(results.bert.probabilities[1] * 100).toFixed(2)}%</div>
+              {results.bert && results.bert.prediction !== undefined && (
+                <div className={styles.modelCard}>
+                  <h3>BERT</h3>
+                  <div className={styles.prediction}>
+                    <div className={styles.label}>
+                      Prediction: <span className={results.bert.prediction === 0 ? styles.fake : styles.genuine}>
+                        {results.bert.prediction === 0 ? 'Fake Review' : 'Genuine Review'}
+                      </span>
+                    </div>
+                    <div className={styles.confidence}>
+                      Confidence: {results.bert.confidence ? (results.bert.confidence * 100).toFixed(2) : '0.00'}%
+                    </div>
+                    <div className={styles.probabilities}>
+                      <div>Fake: {results.bert.probabilities && results.bert.probabilities[0] ? (results.bert.probabilities[0] * 100).toFixed(2) : '0.00'}%</div>
+                      <div>Genuine: {results.bert.probabilities && results.bert.probabilities[1] ? (results.bert.probabilities[1] * 100).toFixed(2) : '0.00'}%</div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
               
-              <div className={styles.modelCard}>
-                <h3>DeBERTa</h3>
-                <div className={styles.prediction}>
-                  <div className={styles.label}>
-                    Prediction: <span className={results.deberta.prediction === 0 ? styles.fake : styles.genuine}>
-                      {results.deberta.prediction === 0 ? 'Fake Review' : 'Genuine Review'}
-                    </span>
-                  </div>
-                  <div className={styles.confidence}>
-                    Confidence: {(results.deberta.confidence * 100).toFixed(2)}%
-                  </div>
-                  <div className={styles.probabilities}>
-                    <div>Fake: {(results.deberta.probabilities[0] * 100).toFixed(2)}%</div>
-                    <div>Genuine: {(results.deberta.probabilities[1] * 100).toFixed(2)}%</div>
+              {results.deberta && results.deberta.prediction !== undefined && (
+                <div className={styles.modelCard}>
+                  <h3>DeBERTa</h3>
+                  <div className={styles.prediction}>
+                    <div className={styles.label}>
+                      Prediction: <span className={results.deberta.prediction === 0 ? styles.fake : styles.genuine}>
+                        {results.deberta.prediction === 0 ? 'Fake Review' : 'Genuine Review'}
+                      </span>
+                    </div>
+                    <div className={styles.confidence}>
+                      Confidence: {results.deberta.confidence ? (results.deberta.confidence * 100).toFixed(2) : '0.00'}%
+                    </div>
+                    <div className={styles.probabilities}>
+                      <div>Fake: {results.deberta.probabilities && results.deberta.probabilities[0] ? (results.deberta.probabilities[0] * 100).toFixed(2) : '0.00'}%</div>
+                      <div>Genuine: {results.deberta.probabilities && results.deberta.probabilities[1] ? (results.deberta.probabilities[1] * 100).toFixed(2) : '0.00'}%</div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              )}
             </div>
             
-            {results.bert.prediction !== results.deberta.prediction && (
+            {results.bert && results.bert.prediction !== undefined && 
+             results.deberta && results.deberta.prediction !== undefined && 
+             results.bert.prediction !== results.deberta.prediction && (
               <div className={styles.disagreement}>
                 ⚠️ Models disagree on this review!
               </div>
