@@ -129,10 +129,11 @@ export default function Dataset() {
               ) : selectedSample.result ? (
                 <div className={styles.result}>
                   {/* Handle both single result and comparison format */}
-                  {selectedSample.result.bert || selectedSample.result.deberta ? (
+                  {(selectedSample.result.bert && selectedSample.result.bert.prediction !== undefined) || 
+                   (selectedSample.result.deberta && selectedSample.result.deberta.prediction !== undefined) ? (
                     // Comparison format (both models)
                     <div>
-                      {selectedSample.result.bert && (
+                      {selectedSample.result.bert && selectedSample.result.bert.prediction !== undefined && (
                         <div style={{ marginBottom: '1rem' }}>
                           <h4>BERT</h4>
                           <div className={styles.label}>
@@ -141,11 +142,11 @@ export default function Dataset() {
                             </span>
                           </div>
                           <div className={styles.confidence}>
-                            Confidence: {(selectedSample.result.bert.confidence * 100).toFixed(2)}%
+                            Confidence: {selectedSample.result.bert.confidence ? (selectedSample.result.bert.confidence * 100).toFixed(2) : '0.00'}%
                           </div>
                         </div>
                       )}
-                      {selectedSample.result.deberta && (
+                      {selectedSample.result.deberta && selectedSample.result.deberta.prediction !== undefined && (
                         <div>
                           <h4>DeBERTa</h4>
                           <div className={styles.label}>
@@ -154,7 +155,7 @@ export default function Dataset() {
                             </span>
                           </div>
                           <div className={styles.confidence}>
-                            Confidence: {(selectedSample.result.deberta.confidence * 100).toFixed(2)}%
+                            Confidence: {selectedSample.result.deberta.confidence ? (selectedSample.result.deberta.confidence * 100).toFixed(2) : '0.00'}%
                           </div>
                         </div>
                       )}
