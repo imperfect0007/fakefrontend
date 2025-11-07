@@ -19,21 +19,42 @@ export default function Home() {
     setResults(null);
 
     try {
-      const response = await fetch('/api/predict', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ text }),
-      });
+      console.log('[Frontend] Sending prediction request...');
+      
+      // Create AbortController for client-side timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 65000); // 65 second timeout (slightly longer than API timeout)
+      
+      let response;
+      try {
+        response = await fetch('/api/predict', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ text }),
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        if (fetchError.name === 'AbortError') {
+          throw new Error('Request timeout - the request took too long. Please try again.');
+        }
+        throw fetchError;
+      }
+
+      console.log('[Frontend] Response status:', response.status);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Prediction failed' }));
-        throw new Error(errorData.message || errorData.error || 'Prediction failed');
+        console.error('[Frontend] Error response:', errorData);
+        const errorMsg = errorData.message || errorData.error || errorData.details || 'Prediction failed';
+        throw new Error(errorMsg);
       }
 
       const data = await response.json();
-      console.log('Received prediction results:', data);
+      console.log('[Frontend] Received prediction results:', data);
       
       // Ensure data is in expected format
       if (!data || (typeof data !== 'object')) {
@@ -42,10 +63,16 @@ export default function Home() {
       
       setResults(data);
     } catch (err) {
-      console.error('Prediction error:', err);
+      console.error('[Frontend] Prediction error:', err);
       const errorMessage = err.message || 'An error occurred';
-      if (errorMessage.includes('localhost') || errorMessage.includes('connect')) {
-        setError('Cannot connect to backend. Make sure the backend server is running on http://localhost:8000');
+      
+      // Handle different error types
+      if (errorMessage.includes('timeout') || errorMessage.includes('Request timeout')) {
+        setError('Request timed out. The backend server may be overloaded. Please try again in a moment.');
+      } else if (errorMessage.includes('localhost') || errorMessage.includes('connect') || errorMessage.includes('Failed to connect')) {
+        setError('Cannot connect to backend. Make sure the backend server is running on https://fakenews-oz9j.onrender.com');
+      } else if (errorMessage.includes('504')) {
+        setError('Backend request timed out. Please try again.');
       } else {
         setError(errorMessage);
       }
