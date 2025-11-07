@@ -58,23 +58,23 @@ export default function Home() {
   return (
     <div className={styles.container}>
       <Head>
-        <title>BERT vs DeBERTa - Fake Review Detection</title>
-        <meta name="description" content="Compare BERT and DeBERTa models for fake review detection" />
+        <title>Fake News Using DeBERTa Model</title>
+        <meta name="description" content="Fake news detection using DeBERTa model" />
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
       <main className={styles.main}>
         <h1 className={styles.title}>
-          BERT vs DeBERTa
+          Fake News Using DeBERTa Model
         </h1>
         <p className={styles.description}>
-          Compare Transformer Models for Fake Review Detection
+          Detect fake news using advanced DeBERTa transformer model
         </p>
 
         <div className={styles.inputSection}>
           <textarea
             className={styles.textarea}
-            placeholder="Enter your review text here..."
+            placeholder="Enter news article or text to analyze..."
             value={text}
             onChange={(e) => setText(e.target.value)}
             rows={6}
@@ -152,7 +152,7 @@ export default function Home() {
       </main>
 
       <footer className={styles.footer}>
-        <p>BERT vs DeBERTa Fake Review Detection System</p>
+        <p>Fake News Detection Using DeBERTa Model</p>
       </footer>
     </div>
   );
