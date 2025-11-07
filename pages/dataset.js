@@ -126,21 +126,59 @@ export default function Dataset() {
                 <div className={styles.loading}>Analyzing...</div>
               ) : selectedSample.error ? (
                 <div className={styles.error}>{selectedSample.error}</div>
-              ) : (
+              ) : selectedSample.result ? (
                 <div className={styles.result}>
-                  <div className={styles.label}>
-                    Prediction: <span className={selectedSample.result.prediction === 0 ? styles.fake : styles.genuine}>
-                      {selectedSample.result.prediction === 0 ? 'Fake Review' : 'Genuine Review'}
-                    </span>
-                  </div>
-                  <div className={styles.confidence}>
-                    Confidence: {(selectedSample.result.confidence * 100).toFixed(2)}%
-                  </div>
-                  <div className={styles.probabilities}>
-                    <div>Fake: {(selectedSample.result.probabilities[0] * 100).toFixed(2)}%</div>
-                    <div>Genuine: {(selectedSample.result.probabilities[1] * 100).toFixed(2)}%</div>
-                  </div>
+                  {/* Handle both single result and comparison format */}
+                  {selectedSample.result.bert || selectedSample.result.deberta ? (
+                    // Comparison format (both models)
+                    <div>
+                      {selectedSample.result.bert && (
+                        <div style={{ marginBottom: '1rem' }}>
+                          <h4>BERT</h4>
+                          <div className={styles.label}>
+                            Prediction: <span className={selectedSample.result.bert.prediction === 0 ? styles.fake : styles.genuine}>
+                              {selectedSample.result.bert.prediction === 0 ? 'Fake Review' : 'Genuine Review'}
+                            </span>
+                          </div>
+                          <div className={styles.confidence}>
+                            Confidence: {(selectedSample.result.bert.confidence * 100).toFixed(2)}%
+                          </div>
+                        </div>
+                      )}
+                      {selectedSample.result.deberta && (
+                        <div>
+                          <h4>DeBERTa</h4>
+                          <div className={styles.label}>
+                            Prediction: <span className={selectedSample.result.deberta.prediction === 0 ? styles.fake : styles.genuine}>
+                              {selectedSample.result.deberta.prediction === 0 ? 'Fake Review' : 'Genuine Review'}
+                            </span>
+                          </div>
+                          <div className={styles.confidence}>
+                            Confidence: {(selectedSample.result.deberta.confidence * 100).toFixed(2)}%
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    // Single result format
+                    <div>
+                      <div className={styles.label}>
+                        Prediction: <span className={selectedSample.result.prediction === 0 ? styles.fake : styles.genuine}>
+                          {selectedSample.result.prediction === 0 ? 'Fake Review' : 'Genuine Review'}
+                        </span>
+                      </div>
+                      <div className={styles.confidence}>
+                        Confidence: {(selectedSample.result.confidence * 100).toFixed(2)}%
+                      </div>
+                      <div className={styles.probabilities}>
+                        <div>Fake: {(selectedSample.result.probabilities[0] * 100).toFixed(2)}%</div>
+                        <div>Genuine: {(selectedSample.result.probabilities[1] * 100).toFixed(2)}%</div>
+                      </div>
+                    </div>
+                  )}
                 </div>
+              ) : (
+                <div className={styles.error}>No result data available</div>
               )}
               <button className={styles.closeBtn} onClick={() => setSelectedSample(null)}>Close</button>
             </div>
